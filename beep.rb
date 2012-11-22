@@ -9,8 +9,12 @@ module Player
   def self.track
 
     data = Hash.new(){|h,k| h[k] = []}
-    t = Track.new(0, data)
+    locks = []
+    t = Track.new(0, data, locks)
     yield t
+    until locks.empty?
+      sleep(0.1)
+    end
     output = ""
     0.upto(data.keys.sort.last).each do |i|
       output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).+(127).chr
@@ -20,17 +24,27 @@ module Player
       STDOUT.flush
     end
   end
+  # TODO
+  # 1) add method missing that turns a3 => NOTES[a][3]
+  # 2) Eval the block in the context of the instance of Player
 
   private
 
   class Track
-    def initialize offset, store
+    def initialize offset, store, locks
       @data = store
       @offset = offset
+      @locks = locks
     end
 
     def split
-      yield Track.new(@offset, @data)
+      @locks << true
+      offset = @offset
+      Thread.new do
+        yield Track.new(offset, @data, @locks)
+        @locks.pop
+      end
+      self
     end
 
     def slide(meth, start_frequency, end_frequency, amplitude, duration)
@@ -61,6 +75,12 @@ module Player
       def initialize(track, options)
         @track = track
         @options = options
+      end
+      def sharp
+        NoteBuilder.new(@track, @options.merge({frequency: @options[:frequency]*SHARP}))
+      end
+      def flat
+        NoteBuilder.new(@track, @options.merge({frequency: @options[:frequency]/SHARP}))
       end
       def method_missing(msg, *args)
         if OPTIONS.include?(msg)
@@ -94,12 +114,12 @@ module Player
   end
 end
 
-
+SHARP = 1.059
 NOTES[:a][4] = 440
 prev = 440/1.059
 # fill in all the notes on octive 4
 'a as b c cs d ds e f fs g gs'.split(' ').each do |c|
-  new_val = prev*1.059
+  new_val = prev*SHARP
   #Notes.const_set(c.upcase.to_sym, new_val)
   NOTES[c.to_sym][4] ||= new_val
   prev = new_val
