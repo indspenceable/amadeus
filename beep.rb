@@ -1,5 +1,5 @@
 Samplerate = 8000
-NORMALIZE_RATE = 4
+NORMALIZE_RATE = 8
 NOTES = Hash.new(){|h,k| h[k] = {}}
 
 TRACK = []
@@ -57,7 +57,7 @@ module Player
     private
 
     class NoteBuilder
-      OPTIONS = [:wave_type, :frequency, :duration]
+      OPTIONS = [:wave_type, :frequency, :duration, :amplitude]
       def initialize(track, options)
         @track = track
         @options = options
@@ -73,7 +73,7 @@ module Player
         unless (OPTIONS-@options.keys).empty?
           raise "You didn't set: #{(OPTIONS-@options.keys).inspect}"
         end
-        (track||@track).beep(@options[:wave_type], @options[:frequency], 1.0, @options[:duration])
+        (track||@track).beep(@options[:wave_type], @options[:frequency], @options[:amplitude], @options[:duration])
       end
     end
 
@@ -88,7 +88,7 @@ module Player
 
     def square(t)
       st = Math.sin(t)
-      return 1 if st == 0
+      return 0 if st == 0
       st/st.abs
     end
   end
@@ -112,7 +112,7 @@ end
 
 
 Player.track do |t|
-  e = t.sound.wave_type(:sin).duration(1).frequency(NOTES[:e][4])
+  e = t.sound.wave_type(:square).duration(1).frequency(NOTES[:e][4]).amplitude(1.0)
   c = e.frequency(NOTES[:c][4])
   g = e.frequency(NOTES[:g][4])
   gs= e.frequency(NOTES[:g][3])
@@ -143,7 +143,7 @@ Player.track do |t|
     e.frequency(NOTES[:d][4]).play(t2)
   end
 
-  gs.play
+  gs.amplitude(1.5).play
   t.rest(8)
 
 
