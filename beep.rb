@@ -1,36 +1,48 @@
 Samplerate = 8000
+NORMALIZE_RATE = 4
 NOTES = Hash.new(){|h,k| h[k] = {}}
+
+TRACK = []
+TEST = (ARGV[0] == "test")
 
 module Player
   def self.track
-    t = Track.new
+
+    data = Hash.new(){|h,k| h[k] = []}
+    t = Track.new(0, data)
     yield t
-    STDOUT << t.instance_variable_get(:@output)
-    STDOUT.flush
+    output = ""
+    0.upto(data.keys.sort.last).each do |i|
+      output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).chr
+    end
+    unless TEST
+      STDOUT << output
+      STDOUT.flush
+    end
   end
 
   private
 
   class Track
-    def initialize
-      @output = ""
+    def initialize offset, store
+      @data = store
+      @offset = offset
     end
+
+    def split
+      yield Track.new(@offset, @data)
+    end
+
     def slide(meth, start_frequency, end_frequency, amplitude, duration)
-
-      #f = File.open("/dev/dsp", "w")
-      wave = ""
-
       steps = duration * Samplerate
 
       steps.times do |s|
         t = s*((1.0/Samplerate) - duration)/steps
         frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
-        y = send(meth, t * frequency) * 50 + 127;
-        wave << y.to_i.chr
+        y = send(meth, t * frequency)*amplitude * 50 + 127;
+        @data[@offset] << y
+        @offset += 1
       end
-
-      @output << wave
-      #f.write(wave)
     end
     def beep(meth, frequency, amplitude, duration)
       slide(meth, frequency, frequency, amplitude, duration)
@@ -57,11 +69,11 @@ module Player
           super
         end
       end
-      def play
+      def play(track=nil)
         unless (OPTIONS-@options.keys).empty?
           raise "You didn't set: #{(OPTIONS-@options.keys).inspect}"
         end
-        @track.beep(@options[:wave_type], @options[:frequency], 100, @options[:duration])
+        (track||@track).beep(@options[:wave_type], @options[:frequency], 1.0, @options[:duration])
       end
     end
 
@@ -123,6 +135,13 @@ Player.track do |t|
 
   g.play
   t.rest(8)
+
+  t.split do |t2|
+    e.frequency(NOTES[:b][3]).play(t2)
+  end
+  t.split do |t2|
+    e.frequency(NOTES[:d][4]).play(t2)
+  end
 
   gs.play
   t.rest(8)
