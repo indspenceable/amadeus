@@ -13,7 +13,7 @@ module Player
     yield t
     output = ""
     0.upto(data.keys.sort.last).each do |i|
-      output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).chr
+      output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).+(127).chr
     end
     unless TEST
       STDOUT << output
@@ -39,7 +39,7 @@ module Player
       steps.times do |s|
         t = s*((1.0/Samplerate) - duration)/steps
         frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
-        y = send(meth, t * frequency)*amplitude * 50 + 127;
+        y = send(meth, t * frequency)*amplitude * 50;
         @data[@offset] << y
         @offset += 1
       end
