@@ -7,8 +7,7 @@ TEST = (ARGV[0] == "test")
 
 module Player
   def self.track
-
-    data = Hash.new(){|h,k| h[k] = []}
+    data = Hash.new(0)
     locks = []
     t = Track.new(0, data, locks)
     yield t
@@ -16,9 +15,12 @@ module Player
       sleep(0.1)
     end
     output = ""
-    0.upto(data.keys.sort.last).each do |i|
-      output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).+(127).chr
-    end
+    # 0.upto(data.keys.sort.last).each do |i|
+    #   output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).+(127).chr
+    # end
+    output = (0..data.keys.sort.last).to_a.map do |i|
+      data[i].to_i.+(127).chr
+    end.join
     unless TEST
       STDOUT << output
       STDOUT.flush
@@ -53,8 +55,8 @@ module Player
       steps.times do |s|
         t = s*((1.0/Samplerate) - duration)/steps
         frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
-        y = send(meth, t * frequency)*amplitude * 50;
-        @data[@offset] << y
+        y = send(meth, t * frequency)*amplitude * 50 / NORMALIZE_RATE;
+        @data[@offset] += y
         @offset += 1
       end
     end
@@ -62,7 +64,7 @@ module Player
       slide(meth, frequency, frequency, amplitude, duration)
     end
     def rest(duration)
-      beep(:sin, 0,0, duration)
+      @offset += duration * Samplerate
     end
 
     def sound()
@@ -75,6 +77,7 @@ module Player
       def initialize(track, options)
         @track = track
         @options = options
+        @cache = Hash.new(){|h,k| h[k] = {}}
       end
       def sharp
         @sharp ||= NoteBuilder.new(@track, @options.merge({frequency: @options[:frequency]*SHARP}))
@@ -82,13 +85,18 @@ module Player
       def flat
         @flat ||= NoteBuilder.new(@track, @options.merge({frequency: @options[:frequency]/SHARP}))
       end
-      def method_missing(msg, *args)
-        if OPTIONS.include?(msg)
-          NoteBuilder.new(@track, @options.merge({msg => args.first}))
-        else
-          super
+      OPTIONS.each do |msg|
+        define_method(msg) do |arg|
+          @cache[msg][arg] ||= NoteBuilder.new(@track, @options.merge({msg => arg}))
         end
       end
+      # def method_missing(msg, *args)
+      #   if OPTIONS.include?(msg)
+      #     NoteBuilder.new(@track, @options.merge({msg => args.first}))
+      #   else
+      #     super
+      #   end
+      # end
       def play(track=nil)
         unless (OPTIONS-@options.keys).empty?
           raise "You didn't set: #{(OPTIONS-@options.keys).inspect}"
@@ -131,7 +139,7 @@ end
 end
 
 def intro(t)
-  e = t.sound.wave_type(:sin).duration(2).frequency(NOTES[:e][4]).amplitude(1.0)
+  e = t.sound.wave_type(:square).duration(2).frequency(NOTES[:e][4]).amplitude(1.0)
   c = e.frequency(NOTES[:c][4])
   g = e.frequency(NOTES[:g][4])
   gs= e.frequency(NOTES[:g][3])
@@ -162,7 +170,7 @@ def intro(t)
   t.rest(6)
 end
 def verse(t)
-  e2 = t.sound.wave_type(:sin).duration(2).frequency(NOTES[:e][4]).amplitude(1.0)
+  e2 = t.sound.wave_type(:square).duration(2).frequency(NOTES[:e][4]).amplitude(1.0)
   c2 = e2.frequency(NOTES[:c][4])
   g2 = e2.frequency(NOTES[:g][4])
 
@@ -205,7 +213,7 @@ def verse(t)
 end
 
 def bridge_background(t)
-  e1 = t.sound.wave_type(:sin).duration(2).frequency(NOTES[:e][2]).amplitude(1.0)
+  e1 = t.sound.wave_type(:square).duration(2).frequency(NOTES[:e][2]).amplitude(1.0)
   c1 = e1.frequency(NOTES[:c][2])
   g1 = e1.frequency(NOTES[:g][2])
 
@@ -266,7 +274,7 @@ def bridge_background(t)
 end
 
 def bridge_melody(t)
-  e2 = t.sound.wave_type(:sin).duration(2).frequency(NOTES[:e][4]).amplitude(1.0)
+  e2 = t.sound.wave_type(:square).duration(2).frequency(NOTES[:e][4]).amplitude(1.0)
   c2 = e2.frequency(NOTES[:c][4])
   g2 = e2.frequency(NOTES[:g][4])
 
