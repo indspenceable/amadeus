@@ -5,21 +5,18 @@ NOTES = Hash.new(){|h,k| h[k] = {}}
 module Amadeus
   def self.play
     data = Hash.new(0)
-    locks = []
-    t = Track.new(0, data, locks)
+    t = Track.new(0, data)
 
     yield t
 
-    until locks.empty?
-      sleep(0.1)
+    if data.any?
+      output = (0..data.keys.sort.last).to_a.map do |i|
+        data[i].to_i.+(127).chr
+      end.join
+
+      STDOUT << output
+      STDOUT.flush
     end
-
-    output = (0..data.keys.sort.last).to_a.map do |i|
-      data[i].to_i.+(127).chr
-    end.join
-
-    STDOUT << output
-    STDOUT.flush
   end
   # TODO
   # 1) add method missing that turns a3 => NOTES[a][3]
