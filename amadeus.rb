@@ -41,10 +41,16 @@ module Amadeus
 
       raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
 
+      if meth.is_a?(Symbol)
+        lam = ->(i) { self.send(meth, i) }
+      else
+        lam = meth
+      end
+
       steps.to_i.times do |s|
         t = s*((1.0/Samplerate) - duration)/steps
         frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
-        y = send(meth, t * frequency)*amplitude * 50 / NORMALIZE_RATE;
+        y = lam.call(t * frequency)*amplitude * 50 / NORMALIZE_RATE;
         @data[@offset] += y
         @offset += 1
       end
