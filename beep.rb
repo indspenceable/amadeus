@@ -1,30 +1,25 @@
 Samplerate = 8000
-NORMALIZE_RATE = 8
+NORMALIZE_RATE = 8.0
 NOTES = Hash.new(){|h,k| h[k] = {}}
-
-TRACK = []
-TEST = (ARGV[0] == "test")
 
 module Player
   def self.track
     data = Hash.new(0)
     locks = []
     t = Track.new(0, data, locks)
+
     yield t
+
     until locks.empty?
       sleep(0.1)
     end
-    output = ""
-    # 0.upto(data.keys.sort.last).each do |i|
-    #   output << data[i].inject(0, &:+).to_i./(NORMALIZE_RATE).+(127).chr
-    # end
+
     output = (0..data.keys.sort.last).to_a.map do |i|
       data[i].to_i.+(127).chr
     end.join
-    unless TEST
-      STDOUT << output
-      STDOUT.flush
-    end
+
+    STDOUT << output
+    STDOUT.flush
   end
   # TODO
   # 1) add method missing that turns a3 => NOTES[a][3]
