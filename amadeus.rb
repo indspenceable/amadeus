@@ -1,4 +1,4 @@
-Samplerate = 8000
+Samplerate = 8640
 NORMALIZE_RATE = 8.0
 NOTES = Hash.new(){|h,k| h[k] = {}}
 
@@ -25,26 +25,23 @@ module Amadeus
   private
 
   class Track
-    def initialize offset, store, locks
+    def initialize offset, store
       @data = store
       @offset = offset
-      @locks = locks
     end
 
     def split
-      @locks << true
       offset = @offset
-      Thread.new do
-        yield Track.new(offset, @data, @locks)
-        @locks.pop
-      end
+      yield Track.new(offset, @data)
       self
     end
 
     def slide(meth, start_frequency, end_frequency, amplitude, duration)
       steps = duration * Samplerate
 
-      steps.times do |s|
+      raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
+
+      steps.to_i.times do |s|
         t = s*((1.0/Samplerate) - duration)/steps
         frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
         y = send(meth, t * frequency)*amplitude * 50 / NORMALIZE_RATE;
