@@ -1,3 +1,5 @@
+require './waves'
+
 Samplerate = 8640
 NORMALIZE_RATE = 8.0
 NOTES = Hash.new(){|h,k| h[k] = {}}
@@ -93,21 +95,7 @@ module Amadeus
         (track||@track).beep(@options[:wave_type], @options[:frequency], @options[:amplitude], @options[:duration])
       end
     end
-
-    def sin(t)
-      Math.sin(t)
-    end
-    def saw(t)
-        a = Math::PI
-        ta = t/a
-        2*(ta - (0.5 + ta).floor)
-    end
-
-    def square(t)
-      st = Math.sin(t)
-      return 0 if st == 0
-      st/st.abs
-    end
+    include Waves
   end
 end
 
