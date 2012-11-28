@@ -70,6 +70,23 @@ class Instrument
   end
 end
 
+class DetunedInstrument < Instrument
+  def initialize detune_amount, tracker, scale_frquency, *args
+    super(tracker, scale_frquency, *args)
+    @detune_amount = detune_amount
+  end
+  def play degree, duration, opts={}
+    opts = {opts => 1} if opts.is_a?(Symbol)
+    orig = @root
+    @root += @detune_amount
+    (opts[:tracker] || @tracker).split do |t2|
+      super(degree, duration, opts.merge({:tracker => t2}))
+    end
+    @root = orig
+    super
+  end
+end
+
 '.. . .  '
 
 if __FILE__ == $0
