@@ -63,7 +63,21 @@ class Instrument
 
     tracker = opts[:tracker] || @tracker
 
-    tracker.beep(@wave, frequency, amplitude, duration*@quarter_length)
+    if opts[:slide_to]
+      st = opts[:slide_to]
+
+      st_half_steps = st[:degree]
+      st_half_steps += st[:sharp] if st[:sharp]
+      st_half_steps -= st[:flat] if st[:flat]
+
+      st_frequency = @root * (SHARP**st_half_steps)
+      st_frequency /= ((st[:down] || 0) + 1)
+      st_frequency *= ((st[:up] || 0) + 1)
+    else
+      st_frequency = frequency
+    end
+
+    tracker.slide(@wave, frequency, st_frequency, amplitude, duration*@quarter_length)
   end
   def rest duration
     @tracker.rest(duration*@quarter_length)
