@@ -1,7 +1,6 @@
 require './waves'
 
-Samplerate = 8640
-NORMALIZE_RATE = 8.0
+Samplerate = 44100
 NOTES = Hash.new(){|h,k| h[k] = {}}
 
 module Amadeus
@@ -38,21 +37,21 @@ module Amadeus
       self
     end
 
-    def slide(meth, start_frequency, end_frequency, amplitude, duration)
-      steps = duration * Samplerate
+    def slide(wave_method, start_frequency, end_frequency, amplitude, duration)
 
-      raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
-
-      if meth.is_a?(Symbol)
-        lam = ->(i) { self.send(meth, i) }
+      if wave_method.is_a?(Symbol)
+        lam = ->(i) { self.send(wave_method, i) }
       else
-        lam = meth
+        lam = wave_method
       end
 
+      steps = duration * Samplerate
+      raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
+
       steps.to_i.times do |s|
-        t = s*((1.0/Samplerate) - duration)/steps
         frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
-        y = lam.call(t * frequency)*amplitude * 50 / NORMALIZE_RATE;
+        y = lam.call(s*(Math::PI/Samplerate)*frequency)*amplitude/8*127;
+        y.to_i.+(127).chr
         @data[@offset] += y
         @offset += 1
       end
@@ -61,7 +60,9 @@ module Amadeus
       slide(meth, frequency, frequency, amplitude, duration)
     end
     def rest(duration)
-      @offset += duration * Samplerate
+      steps = duration * Samplerate
+      raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
+      @offset += steps.to_i
     end
 
     def sound()
