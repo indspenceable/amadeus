@@ -49,7 +49,7 @@ module Amadeus
       raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
 
       steps.to_i.times do |s|
-        frequency = start_frequency + s*(end_frequency - start_frequency)/steps.to_f
+        frequency = start_frequency + (end_frequency - start_frequency)*s/steps.to_f
         y = lam.call(s*(Math::PI/Samplerate)*frequency)*amplitude/8*127;
         y.to_i.+(127).chr
         @data[@offset] += y

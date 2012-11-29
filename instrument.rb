@@ -66,7 +66,7 @@ class Instrument
     if opts[:slide_to]
       st = opts[:slide_to]
 
-      st_half_steps = st[:degree]
+      st_half_steps = @degrees[st[:degree]]
       st_half_steps += st[:sharp] if st[:sharp]
       st_half_steps -= st[:flat] if st[:flat]
 
