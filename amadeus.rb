@@ -11,7 +11,7 @@ module Amadeus
     yield t
 
     if data.any?
-      output = (0..data.keys.sort.last).to_a.map do |i|
+      output = (0..data.keys.sort.last).map do |i|
         data[i].to_i.+(127).chr
       end.join
 

@@ -13,4 +13,8 @@ module Waves
     return 0 if st == 0
     st/st.abs
   end
+
+  def noise(t)
+    (rand*2)-1
+  end
 end

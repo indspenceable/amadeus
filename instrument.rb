@@ -50,14 +50,23 @@ class Instrument
   def play(degree, duration, opts={})
     opts = {opts => 1} if opts.is_a?(Symbol)
 
+    octive = 0 + (opts[:up] || 0) - (opts[:down] || 0)
+    while degree > 7
+      degree -= 7
+      octive += 1
+    end
+    while degree < 1
+      degree += 7
+      octive -= 1
+    end
+
     # figure out how many half steps up from the root we are
     half_steps = @degrees[degree]
     half_steps += opts[:sharp] if opts[:sharp]
     half_steps -= opts[:flat] if opts[:flat]
 
     frequency = @root * (SHARP**half_steps)
-    frequency /= ((opts[:down] || 0) + 1)
-    frequency *= ((opts[:up] || 0) + 1)
+    frequency *= (2**octive)
 
     amplitude = opts[:amplitude] || @amplitude
 
