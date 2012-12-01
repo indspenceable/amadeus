@@ -15,6 +15,7 @@ module Waves
   end
 
   def noise(t)
-    (rand*2)-1
+    @noise ||= {}
+    @noise[t.to_i % Samplerate] ||= (rand*2)-1
   end
 end
