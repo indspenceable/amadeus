@@ -4,7 +4,7 @@ Samplerate = 44100
 NOTES = Hash.new(){|h,k| h[k] = {}}
 
 module Amadeus
-  def self.play
+  def self.play(opts={})
     bleeps = []
     t = Track.new(0, bleeps)
 
@@ -26,11 +26,45 @@ module Amadeus
         active_sounds << bleeps.shift
       end
       # compute produced char by summing all frequencies, then converting
+      #chr = active_sounds.map{|s| s.frequency_at(i)}.inject(&:+).to_i.+(127).chr
+
       active_sounds.map{|s| s.frequency_at(i)}.inject(&:+).to_i.+(127).chr
     end.join
 
-    STDOUT << output
-    STDOUT.flush
+    # puts output.length
+    # exit
+
+    case opts[:output]
+    when :sox
+      IO.popen("sox -traw -r44100 -b8 -e unsigned-integer - -tcoreaudio", "w") do |io|
+        io << output
+      end
+    when :magick
+      require 'RMagick'
+      image_sampling_period = Samplerate/(opts[:samplerate] || 1000)
+
+      image = Magick::Image.new(ending_time/image_sampling_period + 1, 256)
+      #skip the first and last
+      ary = output.split("")
+      ary[0] = nil
+      ary[-1] = nil
+      ary[-2] = nil
+      ary.each_with_index do |c, n|
+        next unless c
+        next unless n%image_sampling_period == 0
+        num = c.ord
+        x = n/image_sampling_period
+        image.view(x, num, 1, 1) do |view|
+          view[][] = Magick::Pixel.new(0, Magick::MaxRGB)
+        end
+      end
+      filename = opts[:file_name] || "out.gif"
+      puts "Preparing to write to #{filename}"
+      image.write(filename)
+    else
+      STDOUT << output
+      STDOUT.flush
+    end
   end
   # TODO
   # 1) add method missing that turns a3 => NOTES[a][3]
@@ -47,7 +81,7 @@ module Amadeus
       frequency = 2 **(
         (time_units_passed / duration) *(Math.log2(end_frequency) -
           Math.log2(start_frequency)) + Math.log2(start_frequency))
-      oscillator.call(time_units_passed*(Math::PI/Samplerate)*frequency)*amplitude/8*127;
+      oscillator.call(time_units_passed*2*(Math::PI/Samplerate)*frequency)*amplitude/8*127;
     end
   end
 
