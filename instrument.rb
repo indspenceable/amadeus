@@ -1,20 +1,34 @@
 class Instrument
-  DEGREES = {
-    1 => 0,
-    2 => 2,
-    3 => 4,
-    4 => 5,
-    5 => 7,
-    6 => 9,
-    7 => 11
-  }
-  def initialize tracker, scale_frquency, quarter_length, wave, amplitude=1.0
+  def minor
+    {
+      1 => 0,
+      2 => 2,
+      3 => 3,
+      4 => 5,
+      # :b => 6,
+      5 => 7,
+      6 => 8,
+      7 => 10
+    }
+  end
+  def major
+    {
+      1 => 0,
+      2 => 2,
+      3 => 4,
+      4 => 5,
+      5 => 7,
+      6 => 9,
+      7 => 11
+    }
+  end
+  def initialize tracker, scale_frquency, quarter_length, wave, amplitude, scale=:major
     @quarter_length = quarter_length
     @root = scale_frquency
     #@wave = wave.is_a?(Symbol) ? ->(t) { self.send(wave) } : wave
     @wave = wave
     @amplitude = amplitude
-    @degrees = DEGREES
+    @degrees = self.send(scale)
 
     @tracker = tracker
   end
@@ -74,8 +88,19 @@ class Instrument
 
     if opts[:slide_to]
       st = opts[:slide_to]
+      st_degree = st[:degree]
 
-      st_half_steps = @degrees[st[:degree]]
+      st_octive = 0 + (st[:up] || 0) - (st[:down] || 0)
+      while st_degree > 7
+        st_degree -= 7
+        st_octive += 1
+      end
+      while st_degree < 1
+        st_degree += 7
+        st_octive -= 1
+      end
+
+      st_half_steps = @degrees[st_degree]
       st_half_steps += st[:sharp] if st[:sharp]
       st_half_steps -= st[:flat] if st[:flat]
 
