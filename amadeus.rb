@@ -5,25 +5,51 @@ NOTES = Hash.new(){|h,k| h[k] = {}}
 
 module Amadeus
   def self.play
-    data = Hash.new(0)
-    t = Track.new(0, data)
+    bleeps = []
+    t = Track.new(0, bleeps)
 
     yield t
 
-    if data.any?
-      output = (0..data.keys.sort.last).map do |i|
-        data[i].to_i.+(127).chr
-      end.join
 
-      STDOUT << output
-      STDOUT.flush
+    bleeps.sort!{|a,b| a.starting_time <=> b.starting_time}
+    last_ending = bleeps.max do |a,b|
+      a.starting_time + a.duration <=> b.starting_time + b.duration
     end
+    ending_time = last_ending.starting_time + last_ending.duration
+
+    active_sounds = []
+    output = ending_time.to_i.times.map do |i|
+      #drop all that aren't active anymore
+      active_sounds.select!{|s| s.active_at?(i)}
+      # add all sounds that will be active, as of now
+      while bleeps[0] && bleeps[0].active_at?(i)
+        active_sounds << bleeps.shift
+      end
+      # compute produced char by summing all frequencies, then converting
+      active_sounds.map{|s| s.frequency_at(i)}.inject(&:+).to_i.+(127).chr
+    end.join
+
+    STDOUT << output
+    STDOUT.flush
   end
   # TODO
   # 1) add method missing that turns a3 => NOTES[a][3]
   # 2) Eval the block in the context of the instance of Amadeus
 
   private
+  class Beep < Struct.new(:starting_time,
+    :oscillator, :start_frequency, :end_frequency, :amplitude, :duration)
+    def active_at?(t)
+      t >= starting_time && t <= (starting_time+duration)
+    end
+    def frequency_at(t)
+      time_units_passed = t.to_f - starting_time
+      frequency = 2 **(
+        (time_units_passed / duration) *(Math.log2(end_frequency) -
+          Math.log2(start_frequency)) + Math.log2(start_frequency))
+      oscillator.call(time_units_passed*(Math::PI/Samplerate)*frequency)*amplitude/8*127;
+    end
+  end
 
   class Track
     def initialize offset, store
@@ -38,7 +64,16 @@ module Amadeus
     end
 
     def slide(wave_method, start_frequency, end_frequency, amplitude, duration)
-
+      if wave_method.is_a?(Symbol)
+        lam = ->(i) { self.send(wave_method, i) }
+      else
+        lam = wave_method
+      end
+      @data << Beep.new(@offset, lam, start_frequency, end_frequency, amplitude, duration*Samplerate)
+      #now sleep for the duration
+      rest(duration)
+    end
+    def depricated
       if wave_method.is_a?(Symbol)
         lam = ->(i) { self.send(wave_method, i) }
       else
@@ -46,7 +81,6 @@ module Amadeus
       end
 
       steps = duration * Samplerate
-      raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
 
       steps.to_i.times do |s|
         frequency = start_frequency + (end_frequency - start_frequency)*s/steps.to_f
@@ -61,7 +95,6 @@ module Amadeus
     end
     def rest(duration)
       steps = duration * Samplerate
-      raise "Bad duration! #{duration} #{steps}" if steps.to_i != steps
       @offset += steps.to_i
     end
 
